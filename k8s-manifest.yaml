@@ -1,0 +1,307 @@
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trading-system
+
+---
+# ConfigMap for Application Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trading-config
+  namespace: trading-system
+data:
+  CLICKHOUSE_HOST: "clickhouse-service"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "production"
+
+---
+# Secret for API Credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: trading-secrets
+  namespace: trading-system
+type: Opaque
+stringData:
+  GROWW_API_KEY: "your-api-key-here"
+  DB_PASSWORD: "secure-password"
+  REDIS_PASSWORD: "redis-password"
+
+---
+# Service for Streamlit App
+apiVersion: v1
+kind: Service
+metadata:
+  name: trading-app-service
+  namespace: trading-system
+spec:
+  selector:
+    app: trading-app
+  type: LoadBalancer
+  ports:
+    - name: streamlit
+      port: 8504
+      targetPort: 8504
+      protocol: TCP
+
+---
+# Deployment for Streamlit App
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trading-app
+  namespace: trading-system
+  labels:
+    app: trading-app
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: trading-app
+  template:
+    metadata:
+      labels:
+        app: trading-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      serviceAccountName: trading-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: trading-app
+        image: groww/trading-app:latest
+        imagePullPolicy: Always
+        ports:
+        - name: streamlit
+          containerPort: 8504
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: trading-config
+        - secretRef:
+            name: trading-secrets
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+        livenessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8504
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /_stcore/health
+            port: 8504
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: trading-data-pvc
+      - name: logs
+        persistentVolumeClaim:
+          claimName: trading-logs-pvc
+
+---
+# PersistentVolumeClaim for Data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trading-data-pvc
+  namespace: trading-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# PersistentVolumeClaim for Logs
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trading-logs-pvc
+  namespace: trading-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: trading-app-hpa
+  namespace: trading-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: trading-app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# ServiceAccount with RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trading-service-account
+  namespace: trading-system
+
+---
+# ClusterRole for trading-app
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trading-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trading-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: trading-role
+subjects:
+- kind: ServiceAccount
+  name: trading-service-account
+  namespace: trading-system
+
+---
+# NetworkPolicy for Security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: trading-network-policy
+  namespace: trading-system
+spec:
+  podSelector:
+    matchLabels:
+      app: trading-app
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: trading-system
+    ports:
+    - protocol: TCP
+      port: 8504
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 9092  # Kafka
+    - protocol: TCP
+      port: 6379  # Redis
+    - protocol: TCP
+      port: 8123  # ClickHouse
+
+---
+# Ingress Configuration
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: trading-ingress
+  namespace: trading-system
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - trading.example.com
+    secretName: trading-tls
+  rules:
+  - host: trading.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: trading-app-service
+            port:
+              number: 8504
+
+---
+# Deployment Notes:
+# 1. Prerequisites:
+#    - kubectl installed and configured
+#    - K8s cluster running (minikube, EKS, GKE, AKS)
+#    - Docker image pushed to registry
+#    
+# 2. Deploy to K8s:
+#    kubectl apply -f k8s-manifest.yaml
+#    
+# 3. Check deployment:
+#    kubectl get pods -n trading-system
+#    kubectl get services -n trading-system
+#    kubectl logs -f deployment/trading-app -n trading-system
+#    
+# 4. Scale replicas:
+#    kubectl scale deployment trading-app --replicas=5 -n trading-system
+#    
+# 5. Update image:
+#    kubectl set image deployment/trading-app trading-app=groww/trading-app:v1.1.0 -n trading-system
+#    
+# 6. Delete deployment:
+#    kubectl delete namespace trading-system
