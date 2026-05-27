@@ -13,7 +13,6 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from greeks_sensitivity import GreeksSensitivityCalculator, PortfolioGreeksSensitivity
-from greeks_calculator import GreeksCalculator
 
 st.set_page_config(page_title="Greeks Sensitivity", layout="wide")
 
