@@ -57,7 +57,8 @@ with st.sidebar:
     st.caption("NAVIGATION")
     page = st.selectbox(
         "Select page",
-        ["📊 Dashboard", "🔍 Screener", "📈 Positions", "⚙️ Settings", "📋 History"],
+        ["📊 Dashboard", "🔍 Screener", "📈 Positions", "🎯 Options Builder", 
+         "� Backtest", "⏯️ Simulator", "�📋 History", "⚙️ Settings"],
         key="page_selector"
     )
     
@@ -96,9 +97,18 @@ elif page == "🔍 Screener":
 elif page == "📈 Positions":
     from pages.positions import show_positions
     show_positions()
+elif page == "🎯 Options Builder":
+    from pages.options_builder import show_options_builder
+    show_options_builder()
+elif page == "� Backtest":
+    from pages.backtest_results import show_backtest_results
+    show_backtest_results()
+elif page == "⏯️ Simulator":
+    from pages.simulator import show_simulator
+    show_simulator()
+elif page == "�📋 History":
+    from pages.history import show_history
+    show_history()
 elif page == "⚙️ Settings":
     from pages.settings import show_settings
     show_settings()
-elif page == "📋 History":
-    from pages.history import show_history
-    show_history()
