@@ -40,6 +40,12 @@ class CovarianceMatrix:
         self.cached_timestamp = datetime.now()
         
         return cov_matrix.values
+    
+    @staticmethod
+    def calculate_simple(returns: np.ndarray) -> np.ndarray:
+        """Simple static method to calculate covariance matrix from numpy array."""
+        df = pd.DataFrame(returns)
+        return (df.cov() * 252).values
 
 class Markowitz:
     """Markowitz mean-variance portfolio optimization."""

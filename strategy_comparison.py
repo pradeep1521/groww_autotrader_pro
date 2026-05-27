@@ -89,8 +89,10 @@ class StrategyComparison:
         # Drawdown
         cumulative = np.cumsum([0] + pnl_values)
         running_max = np.maximum.accumulate(cumulative)
-        drawdown = (cumulative - running_max) / running_max
-        max_drawdown = abs(min(drawdown))
+        # Avoid division by zero when running_max is 0
+        with np.errstate(divide='ignore', invalid='ignore'):
+            drawdown = np.where(running_max != 0, (cumulative - running_max) / running_max, 0)
+        max_drawdown = abs(np.nanmin(drawdown)) if not np.isnan(np.nanmin(drawdown)) else 0
         
         # Sharpe ratio
         returns = np.array(pnl_values) / capital

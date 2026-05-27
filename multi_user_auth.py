@@ -118,8 +118,12 @@ class User:
         return hashlib.sha256(f"{password}{salt}".encode()).hexdigest()
     
     @classmethod
-    def create(cls, username: str, email: str, password: str, role: UserRole) -> 'User':
+    def create(cls, username: str, email: str, password: str, role: 'str|UserRole') -> 'User':
         """Create new user."""
+        
+        # Convert string role to enum if needed
+        if isinstance(role, str):
+            role = UserRole[role.upper()]
         
         user = cls(
             user_id=secrets.token_urlsafe(12),
@@ -159,23 +163,30 @@ class AuthenticationManager:
         self.users: Dict[str, User] = {}
         self.sessions: Dict[str, AuthToken] = {}
     
-    def register(self, username: str, email: str, password: str, role: UserRole) -> Tuple[bool, str]:
+    def register(self, username: str, email: str, password: str, role: 'str|UserRole') -> Tuple[bool, Optional['User'], str]:
         """Register new user."""
+        
+        # Convert string role to enum if needed
+        if isinstance(role, str):
+            try:
+                role = UserRole[role.upper()]
+            except KeyError:
+                return False, None, f"Invalid role: {role}. Valid roles: {[r.value for r in UserRole]}"
         
         # Check if username exists
         if any(u.username == username for u in self.users.values()):
-            return False, "Username already exists"
+            return False, None, "Username already exists"
         
         # Check email
         if any(u.email == email for u in self.users.values()):
-            return False, "Email already exists"
+            return False, None, "Email already exists"
         
         # Create user
         user = User.create(username, email, password, role)
         self.users[user.user_id] = user
         
         logger.info(f"✅ User registered: {username}")
-        return True, "User registered successfully"
+        return True, user, "User registered successfully"
     
     def login(self, username: str, password: str) -> Tuple[bool, Optional[AuthToken], str]:
         """Authenticate user and generate token."""
