@@ -10,6 +10,7 @@ from indicators import TechnicalAnalyzer
 from broker import get_broker
 from database import get_database
 from logger import logger
+from cache import download_stock_data
 
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
@@ -77,23 +78,20 @@ def show_screener():
                 try:
                     status_text.text(f"Scanning {symbol}... ({idx+1}/{len(symbols)})")
                     
-                    # Download data
-                    data = yf.download(
-                        f"{symbol}.NS",
-                        period=period,
-                        interval="1d",
-                        auto_adjust=True,
-                        progress=False,
-                        quiet=True
-                    )
+                    # Download data with caching
+                    data = download_stock_data(f"{symbol}.NS", period=period, use_cache=True)
                     
                     if data.empty or len(data) < 20:
                         continue
                     
                     # Analyze
-                    analysis = TechnicalAnalyzer.analyze_stock(data, symbol)
-                    
-                    if analysis and len(analysis) > 0:
+                    try:
+                        analysis = TechnicalAnalyzer.analyze_stock(data, symbol)
+                        
+                        if not analysis or len(analysis) == 0:
+                            logger.warning(f"No analysis for {symbol}")
+                            continue
+                        
                         # Check signal criteria
                         rsi = analysis.get('rsi', 50)
                         momentum = analysis.get('momentum_score', 0)
@@ -108,11 +106,14 @@ def show_screener():
                             **analysis,
                             "signal": signal or "NEUTRAL"
                         })
+                    except Exception as e:
+                        logger.error(f"Analysis error for {symbol}: {str(e)}")
+                        continue
                     
                     progress_bar.progress((idx + 1) / len(symbols))
                 
                 except Exception as e:
-                    logger.error(f"Error scanning {symbol}: {str(e)}")
+                    logger.debug(f"Scan skipped {symbol}: {type(e).__name__}")
                     continue
             
             progress_bar.empty()
@@ -120,7 +121,12 @@ def show_screener():
     
     # Display results
     if st.session_state.scan_results:
-        st.success(f"✅ Scan complete: {len(st.session_state.scan_results)} stocks analyzed")
+        scanned_count = len(st.session_state.scan_results)
+        st.success(f"✅ Scan complete: {scanned_count} stocks analyzed out of {len(symbols)}")
+        
+        if scanned_count == 0:
+            st.warning(f"⚠️ No valid stocks to display. Check logs for yfinance rate limits.")
+            st.stop()
         
         # Sort by momentum score
         sorted_results = sorted(
