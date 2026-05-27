@@ -57,8 +57,8 @@ with st.sidebar:
     st.caption("NAVIGATION")
     page = st.selectbox(
         "Select page",
-        ["📊 Dashboard", "🔍 Screener", "📈 Positions", "🎯 Options Builder", 
-         "� Backtest", "⏯️ Simulator", "�📋 History", "⚙️ Settings"],
+        ["⚡ Trade", "📊 Dashboard", "🔍 Screener", "📈 Positions", "🎯 Options Builder", 
+         "📊 Backtest", "⏯️ Simulator", "📋 History", "⚙️ Settings"],
         key="page_selector"
     )
     
@@ -88,7 +88,10 @@ with st.sidebar:
 
 
 # Route to pages
-if page == "📊 Dashboard":
+if page == "⚡ Trade":
+    from pages.trade import show_trade
+    show_trade()
+elif page == "📊 Dashboard":
     from pages.dashboard import show_dashboard
     show_dashboard()
 elif page == "🔍 Screener":
