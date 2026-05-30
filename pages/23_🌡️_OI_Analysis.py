@@ -270,8 +270,8 @@ tab_oi, tab_oichg, tab_pcr, tab_iv, tab_tbl = st.tabs([
 # ── OI Bar Chart ──────────────────────────────────────────────────────────────
 with tab_oi:
     fig = go.Figure()
-    colors_ce = ["#ff5252cc" if k >= spot else "#ff525255" for k in df_view["strike"]]
-    colors_pe = ["#00c85355" if k >= spot else "#00c853cc" for k in df_view["strike"]]
+    colors_ce = ["rgba(255,82,82,0.8)" if k >= spot else "rgba(255,82,82,0.33)" for k in df_view["strike"]]
+    colors_pe = ["rgba(0,200,83,0.33)" if k >= spot else "rgba(0,200,83,0.8)" for k in df_view["strike"]]
 
     fig.add_trace(go.Bar(
         name="CE (Call) OI", x=df_view["strike"],
