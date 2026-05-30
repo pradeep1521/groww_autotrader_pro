@@ -170,6 +170,30 @@ st.markdown("""
 /* Scrollbar ── */
 ::-webkit-scrollbar { width:4px; height:4px; }
 ::-webkit-scrollbar-thumb { background:#ffd20040; border-radius:4px; }
+
+/* ── Paper trading ── */
+.paper-banner {
+  background: linear-gradient(90deg,#1a1a00,#2a2000);
+  border:2px solid #ffd20060; border-radius:12px;
+  padding:.8rem 1.4rem; margin-bottom:1rem;
+  display:flex; align-items:center; gap:12px;
+}
+.paper-banner .pb-label {
+  color:#ffd200; font-weight:800; font-size:.95rem; letter-spacing:.06em;
+}
+.paper-banner .pb-sub { color:#8892a4; font-size:.78rem; }
+.paper-pos-card {
+  background:#12122a; border:1px solid #ffd20020;
+  border-radius:12px; padding:1.2rem 1.4rem; margin-bottom:.5rem;
+}
+.paper-pnl-pos { color:#00c853; font-weight:700; font-size:1rem; }
+.paper-pnl-neg { color:#ff5252; font-weight:700; font-size:1rem; }
+.paper-mode-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#ffd20018; border:1px solid #ffd20050;
+  color:#ffd200; border-radius:20px;
+  padding:4px 14px; font-size:.82rem; font-weight:700;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -183,6 +207,49 @@ def _client():
 def _live() -> bool:
     c = _client()
     return c is not None and c.is_authenticated()
+
+def _paper_mode() -> bool:
+    return st.session_state.get("paper_mode", False)
+
+def _paper_positions() -> list:
+    return st.session_state.setdefault("paper_positions", [])
+
+def _paper_add(symbol, exchange, side, qty, exec_price, order_type, product):
+    """Record a simulated paper trade."""
+    pos = _paper_positions()
+    # Check if a matching open position exists (same symbol+exchange+side) → add to it
+    for p in pos:
+        if p["symbol"] == symbol and p["exchange"] == exchange and p["status"] == "OPEN":
+            if p["side"] == side:
+                # Average in
+                total_qty  = p["qty"] + qty
+                p["avg_price"] = (p["avg_price"] * p["qty"] + exec_price * qty) / total_qty
+                p["qty"] = total_qty
+                return
+            else:
+                # Opposite side → close position
+                close_qty = min(p["qty"], qty)
+                pnl = (exec_price - p["avg_price"]) * close_qty * (1 if p["side"] == "BUY" else -1)
+                p["qty"]     -= close_qty
+                p["realized_pnl"] = p.get("realized_pnl", 0) + pnl
+                if p["qty"] == 0:
+                    p["status"] = "CLOSED"
+                remaining = qty - close_qty
+                if remaining > 0:
+                    pos.append({"symbol": symbol, "exchange": exchange,
+                                "side": side, "qty": remaining,
+                                "avg_price": exec_price, "ltp": exec_price,
+                                "product": product, "order_type": order_type,
+                                "status": "OPEN", "realized_pnl": 0.0,
+                                "timestamp": datetime.now().strftime("%H:%M:%S")})
+                return
+    # New position
+    pos.append({"symbol": symbol, "exchange": exchange,
+                "side": side, "qty": qty,
+                "avg_price": exec_price, "ltp": exec_price,
+                "product": product, "order_type": order_type,
+                "status": "OPEN", "realized_pnl": 0.0,
+                "timestamp": datetime.now().strftime("%H:%M:%S")})
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Page header
@@ -198,16 +265,28 @@ with h1:
 with h2:
     if _live():
         user = st.session_state.get("neo_username", "")
-        st.markdown(
-            f'''<div class="status-live" style="margin-top:12px;">
-            <span class="dot-live"></span> LIVE · {user}
-            </div>''', unsafe_allow_html=True)
+        if _paper_mode():
+            st.markdown(
+                '<div class="paper-mode-badge" style="margin-top:12px;">📝 PAPER MODE</div>',
+                unsafe_allow_html=True)
+        else:
+            st.markdown(
+                f'<div class="status-live" style="margin-top:12px;">'
+                f'<span class="dot-live"></span> LIVE · {user}</div>',
+                unsafe_allow_html=True)
     else:
         st.markdown(
             '<div class="status-offline" style="margin-top:12px;">⚪ Not connected</div>',
             unsafe_allow_html=True)
 with h3:
     if _live():
+        # Paper mode toggle
+        st.session_state["paper_mode"] = st.toggle(
+            "📝 Paper",
+            value=st.session_state.get("paper_mode", False),
+            key="paper_toggle",
+            help="Paper mode: orders are simulated with real live prices. No real money at risk.",
+        )
         if st.button("Logout", key="main_logout"):
             _client().logout()
             del st.session_state["kotak_client"]
@@ -219,8 +298,9 @@ st.markdown("<hr style='border-color:#ffffff10;margin:.5rem 0 1rem;'>",
 # ─────────────────────────────────────────────────────────────────────────────
 # Tabs
 # ─────────────────────────────────────────────────────────────────────────────
-TAB_SETUP, TAB_DASH, TAB_TRADE, TAB_GTT, TAB_CHAIN, TAB_QUOTES, TAB_HIST = st.tabs([
+TAB_SETUP, TAB_PAPER, TAB_DASH, TAB_TRADE, TAB_GTT, TAB_CHAIN, TAB_QUOTES, TAB_HIST = st.tabs([
     "🔐 Login",
+    "📝 Paper Trading",
     "📊 Dashboard",
     "⚡ Trade",
     "⏰ GTT",
@@ -353,7 +433,191 @@ with TAB_SETUP:
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# TAB 2 – DASHBOARD
+# TAB 2 – PAPER TRADING
+# ════════════════════════════════════════════════════════════════════════════
+with TAB_PAPER:
+    if not _live():
+        st.markdown(
+            '''<div style="background:#ff525210;border:1px solid #ff525230;border-radius:10px;
+            padding:1rem 1.4rem;max-width:500px;">
+            🔐 <b style="color:#ff5252;">Authentication required.</b>
+            <span style="color:#8892a4;"> Login first – paper trading uses your real Kotak Neo
+            live prices, but no real money is ever placed.</span></div>''',
+            unsafe_allow_html=True)
+        st.stop()
+
+    client = _client()
+
+    # ── Banner ───────────────────────────────────────────────────────────────
+    st.markdown("""
+<div class="paper-banner">
+  <div style="font-size:2rem;">📝</div>
+  <div>
+    <div class="pb-label">PAPER TRADING MODE</div>
+    <div class="pb-sub">
+      Orders are <b style="color:#ffd200;">simulated</b> using real Kotak Neo live prices.
+      No real money. No exchange submission. Perfect for strategy testing.
+    </div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    # ── Master switch ────────────────────────────────────────────────────────
+    pm_col, _, reset_col = st.columns([3, 4, 2])
+    with pm_col:
+        st.session_state["paper_mode"] = st.toggle(
+            "📝 Enable Paper Trading Mode",
+            value=st.session_state.get("paper_mode", False),
+            key="paper_tab_toggle",
+            help="When ON, the Trade tab simulates orders instead of sending them to the exchange.")
+    with reset_col:
+        if st.button("🗑️ Reset Portfolio", use_container_width=True, type="secondary",
+                     help="Clear all simulated positions and P&L"):
+            st.session_state["paper_positions"] = []
+            st.success("Paper portfolio reset.", icon="✅")
+            st.rerun()
+
+    if _paper_mode():
+        st.info("🟡 **Paper mode is ON.** Switch to the ⚡ Trade tab to place simulated orders.", icon="📝")
+    else:
+        st.warning("Paper mode is **OFF**. Toggle above to activate, then trade in the ⚡ Trade tab.", icon="⚠️")
+
+    st.markdown("<hr style='border-color:#ffffff10;margin:.8rem 0;'>", unsafe_allow_html=True)
+
+    positions = _paper_positions()
+    open_pos  = [p for p in positions if p["status"] == "OPEN"]
+    closed_pos = [p for p in positions if p["status"] == "CLOSED"]
+
+    # ── Fetch live LTPs for all open positions ───────────────────────────────
+    def _refresh_paper_ltps():
+        for p in open_pos:
+            try:
+                qs = client.get_quote([f'{p["exchange"]}:{p["symbol"]}'])
+                if qs:
+                    p["ltp"] = float(getattr(qs[0], "ltp", p["ltp"]) or p["ltp"])
+            except:
+                pass
+
+    # ── Portfolio summary metrics ────────────────────────────────────────────
+    ph1, ph2, ph3 = st.columns([5, 2, 2])
+    with ph1:
+        st.markdown('<div class="sec-header">Paper Portfolio</div>', unsafe_allow_html=True)
+    with ph2:
+        if st.button("📡 Refresh LTPs", use_container_width=True, key="paper_refresh"):
+            _refresh_paper_ltps()
+            st.toast("Live prices updated.", icon="📡")
+
+    if not open_pos and not closed_pos:
+        st.markdown("""
+<div style="background:#12122a;border:1px solid #ffd20020;border-radius:12px;
+padding:2rem;text-align:center;">
+  <div style="font-size:2.5rem;">📝</div>
+  <div style="color:#8892a4;margin-top:.5rem;">No paper trades yet.</div>
+  <div style="color:#5a6580;font-size:.82rem;margin-top:.3rem;">
+    Enable paper mode above, then go to the ⚡ Trade tab and place a simulated order.
+  </div>
+</div>""", unsafe_allow_html=True)
+    else:
+        # Summary row
+        total_unrealised = 0.0
+        total_realised   = 0.0
+        for p in open_pos:
+            mult = 1 if p["side"] == "BUY" else -1
+            total_unrealised += (p["ltp"] - p["avg_price"]) * p["qty"] * mult
+        for p in positions:
+            total_realised += p.get("realized_pnl", 0.0)
+
+        total_pnl = total_unrealised + total_realised
+        m1, m2, m3, m4 = st.columns(4)
+        with m1: st.metric("📂 Open Positions", len(open_pos))
+        with m2: st.metric("✅ Closed Trades",  len(closed_pos))
+        with m3:
+            st.metric("📈 Unrealised P&L",
+                      f"₹{total_unrealised:+,.2f}",
+                      delta=f"{total_unrealised:+,.2f}")
+        with m4:
+            st.metric("💰 Total P&L (incl. closed)",
+                      f"₹{total_pnl:+,.2f}",
+                      delta=f"{total_pnl:+,.2f}")
+
+        st.markdown("<div style='height:.5rem;'></div>", unsafe_allow_html=True)
+
+        # ── Open positions table ─────────────────────────────────────────────
+        if open_pos:
+            st.markdown('<div class="sec-header">Open Paper Positions</div>', unsafe_allow_html=True)
+            rows = []
+            for p in open_pos:
+                mult   = 1 if p["side"] == "BUY" else -1
+                unreal = (p["ltp"] - p["avg_price"]) * p["qty"] * mult
+                unreal_pct = (unreal / (p["avg_price"] * p["qty"])) * 100 if p["avg_price"] else 0
+                pnl_str = f"₹{unreal:+,.2f}  ({unreal_pct:+.2f}%)"
+                rows.append({
+                    "Symbol":       p["symbol"],
+                    "Exchange":     p["exchange"],
+                    "Side":         p["side"],
+                    "Qty":          p["qty"],
+                    "Avg Price":    f"₹{p['avg_price']:,.2f}",
+                    "LTP":          f"₹{p['ltp']:,.2f}",
+                    "Unrealised P&L": pnl_str,
+                    "Product":      p["product"],
+                    "Entered":      p["timestamp"],
+                })
+            df = pd.DataFrame(rows)
+            st.dataframe(df, hide_index=True, use_container_width=True)
+
+            # Quick close button
+            st.markdown('<div class="sec-header" style="font-size:.9rem;">Quick Close Position</div>',
+                        unsafe_allow_html=True)
+            qc1, qc2, qc3 = st.columns([3, 2, 2])
+            with qc1:
+                close_sym = st.selectbox(
+                    "Position",
+                    [f'{p["side"]} {p["qty"]} {p["symbol"]} @ {p["exchange"]}'
+                     for p in open_pos],
+                    key="paper_close_sel",
+                    label_visibility="collapsed",
+                )
+            with qc2:
+                close_idx = [f'{p["side"]} {p["qty"]} {p["symbol"]} @ {p["exchange"]}'
+                             for p in open_pos].index(close_sym)
+                close_pos_obj = open_pos[close_idx]
+                # Get live price for closing
+                try:
+                    cqs = client.get_quote([f'{close_pos_obj["exchange"]}:{close_pos_obj["symbol"]}'])
+                    close_ltp = float(getattr(cqs[0], "ltp", close_pos_obj["ltp"]) or close_pos_obj["ltp"]) if cqs else close_pos_obj["ltp"]
+                except:
+                    close_ltp = close_pos_obj["ltp"]
+                st.markdown(f"<div style='color:#ffd200;font-size:.9rem;padding-top:8px;'>"
+                            f"LTP: ₹{close_ltp:,.2f}</div>", unsafe_allow_html=True)
+            with qc3:
+                if st.button("🔴 Close at LTP", use_container_width=True, key="paper_close_btn"):
+                    opposite = "SELL" if close_pos_obj["side"] == "BUY" else "BUY"
+                    _paper_add(
+                        close_pos_obj["symbol"], close_pos_obj["exchange"],
+                        opposite, close_pos_obj["qty"], close_ltp,
+                        "MARKET", close_pos_obj["product"])
+                    st.success(
+                        f"✅ Closed {close_pos_obj['qty']} × {close_pos_obj['symbol']} "
+                        f"@ ₹{close_ltp:,.2f}", icon="📝")
+                    st.rerun()
+
+        # ── Closed trades table ──────────────────────────────────────────────
+        if closed_pos:
+            st.markdown('<div class="sec-header">Closed Paper Trades</div>', unsafe_allow_html=True)
+            crows = []
+            for p in closed_pos:
+                crows.append({
+                    "Symbol":       p["symbol"],
+                    "Exchange":     p["exchange"],
+                    "Side":         p["side"],
+                    "Realised P&L": f"₹{p.get('realized_pnl',0):+,.2f}",
+                    "Product":      p["product"],
+                    "Closed":       p["timestamp"],
+                })
+            st.dataframe(pd.DataFrame(crows), hide_index=True, use_container_width=True)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# TAB 3 – DASHBOARD
 # ════════════════════════════════════════════════════════════════════════════
 with TAB_DASH:
     if not _live():
@@ -598,8 +862,14 @@ with TAB_TRADE:
         use_p = price if price > 0 else ltp
         est_val = use_p * qty if use_p else 0
         side_cl = "oc-buy" if side == "BUY" else "oc-sell"
+        paper_badge = (
+            '<div style="background:#ffd20018;border:1px solid #ffd20050;border-radius:8px;'
+            'padding:4px 10px;color:#ffd200;font-size:.75rem;font-weight:700;'
+            'display:inline-block;margin-bottom:.6rem;">📝 PAPER SIMULATION – no real money</div>'
+        ) if _paper_mode() else ""
         st.markdown(f"""
 <div class="order-card">
+  {paper_badge}
   <div style="margin-bottom:.8rem;">
     <span class="{side_cl}">{side}</span>
     <span style="background:#ffffff12;border-radius:6px;padding:2px 8px;
@@ -619,21 +889,63 @@ with TAB_TRADE:
   </div>
 </div>""", unsafe_allow_html=True)
 
-        # Margin check
-        try:
-            m = client.get_margins()
-            req = use_p * qty * 0.2
-            if m.available_margin < req:
-                st.warning(f"Low margin: ₹{m.available_margin:,.0f} available", icon="⚠️")
-            else:
-                st.success(f"Margin OK: ₹{m.available_margin:,.0f}", icon="✅")
-        except: pass
+        # Margin check (skip in paper mode – no real margin consumed)
+        if not _paper_mode():
+            try:
+                m = client.get_margins()
+                req = use_p * qty * 0.2
+                if m.available_margin < req:
+                    st.warning(f"Low margin: ₹{m.available_margin:,.0f} available", icon="⚠️")
+                else:
+                    st.success(f"Margin OK: ₹{m.available_margin:,.0f}", icon="✅")
+            except: pass
+        else:
+            st.info("No real margin consumed in paper mode.", icon="📝")
+
+    # ── Paper mode banner (shown in Trade tab) ────────────────────────────
+    if _paper_mode():
+        st.markdown("""
+<div class="paper-banner" style="margin-bottom:.6rem;">
+  <div style="font-size:1.4rem;">📝</div>
+  <div>
+    <span class="pb-label">PAPER MODE ACTIVE</span>
+    <span class="pb-sub" style="margin-left:10px;">
+      Orders below will be <b style="color:#ffd200;">simulated</b> using the live price —
+      no real money will be placed. Switch off in the 📝 Paper Trading tab.
+    </span>
+  </div>
+</div>""", unsafe_allow_html=True)
 
     # ── Execute ────────────────────────────────────────────────────────────
     if place_btn:
         if not symbol:
             st.error("Select or enter a symbol.", icon="❌")
+        elif _paper_mode():
+            # ── PAPER EXECUTION ──────────────────────────────────────────
+            with st.spinner("Fetching live price for simulation…"):
+                live_q = _quote_for(symbol, exchange)
+            if live_q:
+                exec_price = live_q["ltp"]
+            elif price > 0:
+                exec_price = price
+                st.toast("Live price unavailable – using entered price for simulation", icon="🟡")
+            else:
+                st.error("Cannot simulate: no live price and no limit price entered.", icon="❌")
+                exec_price = None
+
+            if exec_price:
+                _paper_add(symbol, exchange, side, qty, exec_price, order_type, product_code)
+                pnl_side = "bought" if side == "BUY" else "sold"
+                st.success(
+                    f"📝 **Paper order simulated!**  {side} {qty} × **{symbol}** "
+                    f"@ ₹{exec_price:,.2f}  ·  {pnl_side} for ₹{exec_price*qty:,.2f}  ·  "
+                    f"No real money placed.",
+                    icon="📝")
+                st.balloons()
+                st.session_state.pop("tr_quote", None)
+                st.session_state.pop("tr_quote_sym", None)
         else:
+            # ── REAL EXECUTION ────────────────────────────────────────────
             pre = _quote_for(symbol, exchange)
             if pre and order_type == "LIMIT" and price > 0:
                 dev = abs(price - pre["ltp"]) / pre["ltp"] * 100
@@ -854,7 +1166,7 @@ with TAB_HIST:
         st.markdown('<div style="color:#ff5252;">🔐 Login required.</div>', unsafe_allow_html=True)
         st.stop()
     client = _client()
-    st.markdown('<div class="sec-header">Today's Trade History</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec-header">Today\'s Trade History</div>', unsafe_allow_html=True)
 
     rh, _ = st.columns([1, 5])
     with rh:
