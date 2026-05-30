@@ -105,6 +105,18 @@ def _process_signal(payload: dict, auto_execute: bool = False) -> dict:
 
     return signal
 
+def _fetch_paper_ltp(symbol: str, exchange: str) -> float:
+    """Fetch live price for paper mode MARKET orders."""
+    try:
+        import yfinance as yf
+        sym = symbol.replace("-EQ","").replace("-BE","").replace("-SM","").strip()
+        suffix = ".NS" if exchange in ("NSE","NFO","NFO") else (".BO" if exchange == "BSE" else ".NS")
+        t    = yf.Ticker(sym + suffix)
+        hist = t.history(period="1d", interval="1m")
+        return float(hist["Close"].iloc[-1]) if not hist.empty else 0.0
+    except:
+        return 0.0
+
 def _execute_signal(signal: dict) -> dict:
     """Execute a signal — paper or real depending on mode."""
     try:
@@ -119,7 +131,8 @@ def _execute_signal(signal: dict) -> dict:
         if paper:
             # Paper mode – simulate via _paper_add equivalent
             positions = st.session_state.setdefault("paper_positions", [])
-            exec_price = signal["price"] if signal["price"] > 0 else 0
+            # For MARKET orders (price=0), fetch current LTP so P&L is meaningful
+            exec_price = signal["price"] if signal["price"] > 0 else _fetch_paper_ltp(signal["symbol"], signal["exchange"])
             positions.append({
                 "symbol":      signal["symbol"],
                 "exchange":    signal["exchange"],

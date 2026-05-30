@@ -53,7 +53,7 @@ INDICATORS = ["RSI", "MACD Line", "MACD Signal", "MACD Histogram",
 CONDITIONS  = ["crosses above", "crosses below", "is above", "is below",
                "is equal to", "increases by %", "decreases by %"]
 POPULAR_SYM = ["RELIANCE.NS","TCS.NS","INFY.NS","HDFCBANK.NS","ICICIBANK.NS",
-               "SBIN.NS","WIPRO.NS","AXISBANK.NS","BAJFINANCE.NS","NIFTY50.NS"]
+               "SBIN.NS","WIPRO.NS","AXISBANK.NS","BAJFINANCE.NS","^NSEI"]
 
 # ── Session state ─────────────────────────────────────────────────────────────
 if "sb_entry_conditions" not in st.session_state:

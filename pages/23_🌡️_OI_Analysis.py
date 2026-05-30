@@ -344,7 +344,7 @@ with tab_pcr:
                    annotation_text="Bullish (>1.2)", annotation_font_color="#00c853")
     fig3.add_hline(y=0.8, line_color="#ff5252", line_dash="dash",
                    annotation_text="Bearish (<0.8)", annotation_font_color="#ff5252")
-    fig3.add_hline(y=1.0, line_color="#ffffff30", line_dash="dot")
+    fig3.add_hline(y=1.0, line_color="rgba(255,255,255,0.19)", line_dash="dot")
     fig3.update_layout(
         title="Put-Call Ratio (Intraday)", plot_bgcolor="#0d0d1a", paper_bgcolor="#12122a",
         font_color="#c0caf5", height=380,

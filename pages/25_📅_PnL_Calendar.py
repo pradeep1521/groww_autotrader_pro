@@ -104,13 +104,13 @@ def _build_calendar_fig(df_pnl: pd.DataFrame, month: int, year: int) -> go.Figur
               for week,wh in zip([[w for w in wk] for wk in cal], hover)],
         texttemplate="%{text}",
         colorscale=[
-            [0.0, "#7f0000"],
-            [0.3, "#ff5252"],
-            [0.48, "#ff525255"],
-            [0.5, "#1a1a2e"],
-            [0.52, "#00c85355"],
-            [0.7, "#00c853"],
-            [1.0, "#007a2f"],
+            [0.0,  "#7f0000"],
+            [0.3,  "#ff5252"],
+            [0.48, "rgba(255,82,82,0.25)"],
+            [0.5,  "#1a1a2e"],
+            [0.52, "rgba(0,200,83,0.25)"],
+            [0.7,  "#00c853"],
+            [1.0,  "#007a2f"],
         ],
         zmid=0,
         xgap=4, ygap=4,
@@ -261,12 +261,12 @@ with tab_bar:
     bar_colors = ["#00c853" if v >= 0 else "#ff5252" for v in df_sorted["pnl"]]
     fig_bar.add_trace(go.Bar(x=df_sorted["date_str"], y=df_sorted["pnl"],
                               marker_color=bar_colors, name="Daily P&L"), row=1, col=1)
-    fig_bar.add_hline(y=0, line_color="#ffffff30", line_width=1, row=1, col=1)
+    fig_bar.add_hline(y=0, line_color="rgba(255,255,255,0.19)", line_width=1, row=1, col=1)
 
     fig_bar.add_trace(go.Scatter(x=df_sorted["date_str"], y=df_sorted["cumulative"],
                                   mode="lines", fill="tozeroy",
                                   line=dict(color="#ffd200", width=2),
-                                  fillcolor="#ffd20015", name="Cumulative"), row=2, col=1)
+                                  fillcolor="rgba(255,210,0,0.08)", name="Cumulative"), row=2, col=1)
 
     fig_bar.update_layout(
         plot_bgcolor="#0d0d1a", paper_bgcolor="#12122a",
@@ -357,7 +357,7 @@ with tab_dist:
             color=[("#00c853" if v>=0 else "#ff5252") for v in df_pnl["pnl"]],
             line=dict(width=0)),
         name="P&L Distribution"))
-    fig_dist.add_vline(x=0,    line_color="#ffffff50", line_dash="dash")
+    fig_dist.add_vline(x=0,    line_color="rgba(255,255,255,0.31)", line_dash="dash")
     fig_dist.add_vline(x=float(df_pnl["pnl"].mean()), line_color="#ffd200",
                        line_dash="dot", annotation_text=f"Avg ₹{df_pnl['pnl'].mean():,.0f}",
                        annotation_font_color="#ffd200")
