@@ -11,10 +11,16 @@ load_dotenv()
 class AppConfig:
     """Application configuration with environment variables."""
     
-    # API Credentials
+    # API Credentials – Groww
     GROWW_ACCESS_TOKEN: str = os.getenv("GROWW_ACCESS_TOKEN", "")
     GROWW_API_KEY: str = os.getenv("GROWW_API_KEY", "")
     GROWW_API_SECRET: str = os.getenv("GROWW_API_SECRET", "")
+
+    # API Credentials – Kotak Neo (₹0 brokerage Trade API)
+    KOTAK_CONSUMER_KEY: str = os.getenv("KOTAK_CONSUMER_KEY", "")
+    KOTAK_USERNAME: str = os.getenv("KOTAK_USERNAME", "")
+    KOTAK_PASSWORD: str = os.getenv("KOTAK_PASSWORD", "")
+    KOTAK_TOTP_SEED: str = os.getenv("KOTAK_TOTP_SEED", "")
     
     # Mode & Trading Settings
     APP_MODE: str = os.getenv("APP_MODE", "paper").lower()  # paper | live
@@ -52,7 +58,12 @@ class AppConfig:
     def validate(self) -> tuple[bool, str]:
         """Validate configuration and return (is_valid, message)."""
         if self.is_live_mode:
-            if not self.GROWW_ACCESS_TOKEN:
+            broker = self.APP_MODE if hasattr(self, 'BROKER') else os.getenv('BROKER', 'groww')
+            if broker == 'kotak_neo':
+                missing = [k for k in ('KOTAK_CONSUMER_KEY', 'KOTAK_USERNAME', 'KOTAK_PASSWORD', 'KOTAK_TOTP_SEED') if not getattr(self, k)]
+                if missing:
+                    return False, f"Kotak Neo live mode requires: {', '.join(missing)}"
+            elif not self.GROWW_ACCESS_TOKEN:
                 return False, "Live mode requires GROWW_ACCESS_TOKEN"
         
         if self.DEFAULT_RISK_PER_TRADE <= 0:

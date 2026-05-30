@@ -3,7 +3,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from broker import get_broker
+from brokers import get_broker, get_broker_type, BrokerOrder
 from database import get_database
 from logger import logger
 
@@ -12,7 +12,8 @@ def show_trade():
     """Simple, clear order placement interface."""
     
     st.title("⚡ Place Trade")
-    st.caption("Execute BUY or SELL orders on Groww broker")
+    broker_type = get_broker_type()
+    st.caption(f"Execute BUY or SELL orders - Using {broker_type.upper()} broker")
     
     broker = get_broker()
     db = get_database()
@@ -21,12 +22,12 @@ def show_trade():
     col1, col2, col3 = st.columns(3)
     
     try:
-        margin = broker.get_margin()
+        balance = broker.get_balance()
         with col1:
-            st.metric("Available Margin", f"₹{margin['available']:.0f}")
+            st.metric("Available Margin", f"₹{balance.available_margin:,.0f}")
         with col2:
-            mode = "🟢 LIVE" if broker.is_connected else "🔵 PAPER"
-            st.metric("Mode", mode, help="LIVE = real money, PAPER = simulated")
+            broker_status = "🟢 LIVE" if broker.is_connected else "🔵 PAPER"
+            st.metric("Broker Status", broker_status, help=f"Connected to: {broker_type}")
         with col3:
             stats = db.get_trade_stats()
             st.metric("Win Rate", f"{stats['win_rate']:.1f}%")
@@ -139,11 +140,11 @@ def show_trade():
         st.dataframe(df, use_container_width=True, hide_index=True)
         
         # Show margin impact
-        if margin['available'] >= price * quantity:
-            st.success(f"✅ Sufficient margin available (₹{margin['available'] - price * quantity:,.0f} remaining)", 
+        if balance.available_margin >= price * quantity:
+            st.success(f"✅ Sufficient margin available (₹{balance.available_margin - price * quantity:,.0f} remaining)", 
                       icon="💰")
         else:
-            st.error(f"❌ Insufficient margin! Need ₹{price * quantity:,.0f}, have ₹{margin['available']:.0f}", 
+            st.error(f"❌ Insufficient margin! Need ₹{price * quantity:,.0f}, have ₹{balance.available_margin:.0f}", 
                     icon="⚠️")
     else:
         st.info("Enter symbol, quantity, and price to see order summary", icon="ℹ️")
@@ -163,47 +164,56 @@ def show_trade():
                 st.error("❌ Quantity must be greater than 0")
             elif price <= 0:
                 st.error("❌ Invalid price")
-            elif margin['available'] < price * quantity:
+            elif balance.available_margin < price * quantity:
                 st.error("❌ Insufficient margin")
             else:
-                # Place order
+                # Place order using new broker API
                 try:
                     with st.spinner(f"Placing {side} order for {symbol}..."):
-                        order_id = broker.place_order(
+                        # Create order object
+                        order = BrokerOrder(
                             symbol=symbol,
                             side=side,
                             quantity=int(quantity),
                             price=float(price),
-                            order_type=order_type
+                            order_type=order_type,
+                            product='MIS'  # Intraday
                         )
                         
-                        # Save to database
-                        db.add_trade({
-                            'symbol': symbol,
-                            'side': side,
-                            'quantity': int(quantity),
-                            'entry_price': float(price),
-                            'order_type': order_type,
-                            'status': 'OPEN',
-                            'entry_time': datetime.now().isoformat()
-                        })
+                        # Place order with broker
+                        success, message, order_id = broker.place_order(order)
                         
-                        st.success(f"✅ Order placed! Order ID: {order_id}", icon="🎉")
-                        logger.info(f"Order placed: {symbol} {side} {quantity} @ ₹{price}")
-                        
-                        # Show in table
-                        st.subheader("✅ Order Confirmation")
-                        confirmation = pd.DataFrame([{
-                            "Order ID": order_id,
-                            "Symbol": symbol,
-                            "Side": side,
-                            "Quantity": quantity,
-                            "Price": f"₹{price:.2f}",
-                            "Total": f"₹{price * quantity:,.0f}",
-                            "Status": "PLACED",
-                            "Time": datetime.now().strftime("%H:%M:%S")
-                        }])
-                        st.dataframe(confirmation, use_container_width=True, hide_index=True)
+                        if success and order_id:
+                            # Save to database
+                            db.add_trade({
+                                'symbol': symbol,
+                                'side': side,
+                                'quantity': int(quantity),
+                                'entry_price': float(price),
+                                'order_type': order_type,
+                                'status': 'OPEN',
+                                'entry_time': datetime.now().isoformat()
+                            })
+                            
+                            st.success(f"✅ {message}", icon="🎉")
+                            logger.info(f"Order placed: {symbol} {side} {quantity} @ ₹{price} (ID: {order_id})")
+                            
+                            # Show in table
+                            st.subheader("✅ Order Confirmation")
+                            confirmation = pd.DataFrame([{
+                                "Order ID": order_id,
+                                "Symbol": symbol,
+                                "Side": side,
+                                "Quantity": quantity,
+                                "Price": f"₹{price:.2f}",
+                                "Total": f"₹{price * quantity:,.0f}",
+                                "Status": "PLACED",
+                                "Time": datetime.now().strftime("%H:%M:%S")
+                            }])
+                            st.dataframe(confirmation, use_container_width=True, hide_index=True)
+                        else:
+                            st.error(f"❌ Failed: {message}", icon="⚠️")
+                            logger.error(f"Order placement failed: {message}")
                         
                 except Exception as e:
                     st.error(f"❌ Failed to place order: {str(e)}", icon="⚠️")

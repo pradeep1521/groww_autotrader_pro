@@ -1,0 +1,16 @@
+# Kotak Neo NeoTrade Python Client – Requirements
+# ₹0 brokerage on Trade API (all pricing plans)
+
+# Core
+pyotp>=2.9.0              # TOTP generation (automated OTP-less login)
+requests>=2.31.0          # HTTP client
+websocket-client>=1.7.0   # WebSocket live tick streaming
+python-dotenv>=1.0.0      # .env loading
+
+# Utilities
+python-dateutil>=2.9.0    # datetime parsing from API responses
+
+# Testing
+pytest>=8.0.0
+pytest-cov>=5.0.0
+responses>=0.25.0         # mock HTTP for unit tests

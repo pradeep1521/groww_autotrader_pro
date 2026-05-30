@@ -49,16 +49,18 @@ with st.sidebar:
     st.divider()
     
     # Mode indicator
-    mode_badge = "🟢 LIVE" if config.is_live_mode else "🔵 PAPER"
-    st.markdown(f"### {mode_badge}", help="Paper = simulated, Live = real Groww account")
+    from brokers import get_broker_type
+    broker_type = get_broker_type()
+    mode_badge = f"🟢 {broker_type.upper()}" if broker_type != 'paper' else "🔵 PAPER"
+    st.markdown(f"### {mode_badge}", help=f"Connected to: {broker_type}")
     
     # Navigation
     st.divider()
     st.caption("NAVIGATION")
     page = st.selectbox(
         "Select page",
-        ["⚡ Trade", "📊 Dashboard", "🔍 Screener", "📈 Positions", "🎯 Options Builder", 
-         "📊 Backtest", "⏯️ Simulator", "📋 History", "⚙️ Settings"],
+        ["⚙️ Broker Setup", "⚡ Trade", "📊 Dashboard", "🔍 Screener", "📈 Positions", "🎯 Options Builder", 
+         "📊 Backtest", "⏯️ Simulator", "📋 History"],
         key="page_selector"
     )
     
@@ -88,7 +90,10 @@ with st.sidebar:
 
 
 # Route to pages
-if page == "⚡ Trade":
+if page == "⚙️ Broker Setup":
+    from pages.broker_setup import show_broker_setup
+    show_broker_setup()
+elif page == "⚡ Trade":
     from pages.trade import show_trade
     show_trade()
 elif page == "📊 Dashboard":
