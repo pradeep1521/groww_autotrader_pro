@@ -334,27 +334,42 @@ with TAB_SETUP:
         st.markdown("""
         <div class="setup-card">
         <b style="color:#ffd200;">What you need:</b><br><br>
+
         <b style="color:#e0e0e0;">1. Kotak Neo demat account</b><br>
         <span style="color:#8892a4;font-size:.85rem;">Open at
         <a href="https://www.kotakneo.com" style="color:#ffd200;">kotakneo.com</a>
         if you don't have one</span><br><br>
-        <b style="color:#e0e0e0;">2. API Consumer Key</b><br>
+
+        <b style="color:#e0e0e0;">2. Consumer Key (API Token)</b><br>
         <span style="color:#8892a4;font-size:.85rem;">
-        The old developers.kotaksecurities.com portal is <b style="color:#ff5252;">shut down</b>.<br>
-        To get a Consumer Key, email
-        <a href="mailto:neosupport@kotak.com" style="color:#ffd200;">neosupport@kotak.com</a>
-        or raise a ticket via the
-        <a href="https://www.kotakneo.com/contact-us" style="color:#ffd200;">Kotak Neo support page</a>.
-        Mention you need <b style="color:#e0e0e0;">NeoTrade API access</b> for algo trading.
+        No external registration needed — get it directly from the app:<br>
+        <b style="color:#e0e0e0;">Kotak Neo app / web → Invest tab → Trade API card
+        → Generate Application → copy the token</b><br>
+        Need help?
+        <a href="https://www.kotakneo.com/platform/kotak-neo-trade-api/" style="color:#ffd200;">Official Trade API page</a>
+        · Email <a href="mailto:support@kotakneo.com" style="color:#ffd200;">support@kotakneo.com</a>
         </span><br><br>
+
         <b style="color:#e0e0e0;">3. TOTP Seed (base-32 secret)</b><br>
-        <span style="color:#8892a4;font-size:.85rem;">Open Google Authenticator → tap Kotak entry →
-        "Copy secret".<br>Looks like: <code>JBSWY3DPEHPK3PXP</code></span><br><br>
+        <span style="color:#8892a4;font-size:.85rem;">
+        Register TOTP at <a href="https://www.kotaksecurities.com/platform/kotak-neo-trade-api/" style="color:#ffd200;">kotaksecurities.com → Trade API → Register for TOTP</a>.<br>
+        After scanning the QR code in your authenticator app, copy the base-32 secret.<br>
+        Looks like: <code>JBSWY3DPEHPK3PXP</code></span><br><br>
+
+        <div style="background:#ff525212;border:1px solid #ff525230;border-radius:8px;
+        padding:.7rem 1rem;margin-bottom:.6rem;">
+        🌐 <b style="color:#ffd200;">Static IP Required:</b>
+        <span style="color:#e0e0e0;font-size:.82rem;"> Kotak Neo requires your server/machine IP
+        to be whitelisted before API calls succeed.
+        <a href="https://www.kotakneo.com/platform/kotak-neo-trade-api/static-ip-details/" style="color:#ffd200;">
+        Whitelist your IP here →</a></span>
+        </div>
+
         <div style="background:#ffd20012;border:1px solid #ffd20030;border-radius:8px;
-        padding:.7rem 1rem;margin-top:.5rem;">
+        padding:.7rem 1rem;">
         🤖 <b style="color:#ffd200;">Auto-TOTP:</b>
-        <span style="color:#e0e0e0;font-size:.85rem;"> The 6-digit code is generated automatically
-        every 30s. You never need to enter it manually.</span>
+        <span style="color:#e0e0e0;font-size:.85rem;"> The 6-digit TOTP code is generated
+        automatically every 30s from your seed. You never enter it manually.</span>
         </div>
         </div>
         """, unsafe_allow_html=True)
