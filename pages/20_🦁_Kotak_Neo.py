@@ -335,11 +335,18 @@ with TAB_SETUP:
         <div class="setup-card">
         <b style="color:#ffd200;">What you need:</b><br><br>
         <b style="color:#e0e0e0;">1. Kotak Neo demat account</b><br>
-        <span style="color:#8892a4;font-size:.85rem;">Open at kotakneo.com if you don't have one</span><br><br>
-        <b style="color:#e0e0e0;">2. Developer Consumer Key</b><br>
-        <span style="color:#8892a4;font-size:.85rem;">Create a free app at
-        <a href="https://developers.kotaksecurities.com" style="color:#ffd200;">
-        developers.kotaksecurities.com</a></span><br><br>
+        <span style="color:#8892a4;font-size:.85rem;">Open at
+        <a href="https://www.kotakneo.com" style="color:#ffd200;">kotakneo.com</a>
+        if you don't have one</span><br><br>
+        <b style="color:#e0e0e0;">2. API Consumer Key</b><br>
+        <span style="color:#8892a4;font-size:.85rem;">
+        The old developers.kotaksecurities.com portal is <b style="color:#ff5252;">shut down</b>.<br>
+        To get a Consumer Key, email
+        <a href="mailto:neosupport@kotak.com" style="color:#ffd200;">neosupport@kotak.com</a>
+        or raise a ticket via the
+        <a href="https://www.kotakneo.com/contact-us" style="color:#ffd200;">Kotak Neo support page</a>.
+        Mention you need <b style="color:#e0e0e0;">NeoTrade API access</b> for algo trading.
+        </span><br><br>
         <b style="color:#e0e0e0;">3. TOTP Seed (base-32 secret)</b><br>
         <span style="color:#8892a4;font-size:.85rem;">Open Google Authenticator → tap Kotak entry →
         "Copy secret".<br>Looks like: <code>JBSWY3DPEHPK3PXP</code></span><br><br>
