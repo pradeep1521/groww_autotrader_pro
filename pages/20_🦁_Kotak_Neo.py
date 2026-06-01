@@ -322,140 +322,139 @@ with TAB_SETUP:
             <div style="color:#8892a4;font-size:.85rem;margin-top:.3rem;">
             Session is active. Switch to Dashboard or Trade tab to get started.</div>
             </div>''', unsafe_allow_html=True)
-        st.stop()
+    else:
+        st.markdown(
+            '<div class="sec-header">Connect Your Kotak Neo Account</div>',
+            unsafe_allow_html=True)
 
-    st.markdown(
-        '<div class="sec-header">Connect Your Kotak Neo Account</div>',
-        unsafe_allow_html=True)
+        left, right = st.columns([1, 1], gap="large")
 
-    left, right = st.columns([1, 1], gap="large")
+        with left:
+            st.markdown("""
+            <div class="setup-card">
+            <b style="color:#ffd200;">What you need:</b><br><br>
 
-    with left:
-        st.markdown("""
-        <div class="setup-card">
-        <b style="color:#ffd200;">What you need:</b><br><br>
+            <b style="color:#e0e0e0;">1. Kotak Neo demat account</b><br>
+            <span style="color:#8892a4;font-size:.85rem;">Open at
+            <a href="https://www.kotakneo.com" style="color:#ffd200;">kotakneo.com</a>
+            if you don't have one</span><br><br>
 
-        <b style="color:#e0e0e0;">1. Kotak Neo demat account</b><br>
-        <span style="color:#8892a4;font-size:.85rem;">Open at
-        <a href="https://www.kotakneo.com" style="color:#ffd200;">kotakneo.com</a>
-        if you don't have one</span><br><br>
+            <b style="color:#e0e0e0;">2. Consumer Key (API Token)</b><br>
+            <span style="color:#8892a4;font-size:.85rem;">
+            No external registration needed — get it directly from the app:<br>
+            <b style="color:#e0e0e0;">Kotak Neo app / web → Invest tab → Trade API card
+            → Generate Application → copy the token</b><br>
+            Need help?
+            <a href="https://www.kotakneo.com/platform/kotak-neo-trade-api/" style="color:#ffd200;">Official Trade API page</a>
+            · Email <a href="mailto:support@kotakneo.com" style="color:#ffd200;">support@kotakneo.com</a>
+            </span><br><br>
 
-        <b style="color:#e0e0e0;">2. Consumer Key (API Token)</b><br>
-        <span style="color:#8892a4;font-size:.85rem;">
-        No external registration needed — get it directly from the app:<br>
-        <b style="color:#e0e0e0;">Kotak Neo app / web → Invest tab → Trade API card
-        → Generate Application → copy the token</b><br>
-        Need help?
-        <a href="https://www.kotakneo.com/platform/kotak-neo-trade-api/" style="color:#ffd200;">Official Trade API page</a>
-        · Email <a href="mailto:support@kotakneo.com" style="color:#ffd200;">support@kotakneo.com</a>
-        </span><br><br>
+            <b style="color:#e0e0e0;">3. TOTP Seed (base-32 secret)</b><br>
+            <span style="color:#8892a4;font-size:.85rem;">
+            Register TOTP at <a href="https://www.kotaksecurities.com/platform/kotak-neo-trade-api/" style="color:#ffd200;">kotaksecurities.com → Trade API → Register for TOTP</a>.<br>
+            After scanning the QR code in your authenticator app, copy the base-32 secret.<br>
+            Looks like: <code>JBSWY3DPEHPK3PXP</code></span><br><br>
 
-        <b style="color:#e0e0e0;">3. TOTP Seed (base-32 secret)</b><br>
-        <span style="color:#8892a4;font-size:.85rem;">
-        Register TOTP at <a href="https://www.kotaksecurities.com/platform/kotak-neo-trade-api/" style="color:#ffd200;">kotaksecurities.com → Trade API → Register for TOTP</a>.<br>
-        After scanning the QR code in your authenticator app, copy the base-32 secret.<br>
-        Looks like: <code>JBSWY3DPEHPK3PXP</code></span><br><br>
+            <div style="background:#ff525212;border:1px solid #ff525230;border-radius:8px;
+            padding:.7rem 1rem;margin-bottom:.6rem;">
+            🌐 <b style="color:#ffd200;">Static IP Required:</b>
+            <span style="color:#e0e0e0;font-size:.82rem;"> Kotak Neo requires your server/machine IP
+            to be whitelisted before API calls succeed.
+            <a href="https://www.kotakneo.com/platform/kotak-neo-trade-api/static-ip-details/" style="color:#ffd200;">
+            Whitelist your IP here →</a></span>
+            </div>
 
-        <div style="background:#ff525212;border:1px solid #ff525230;border-radius:8px;
-        padding:.7rem 1rem;margin-bottom:.6rem;">
-        🌐 <b style="color:#ffd200;">Static IP Required:</b>
-        <span style="color:#e0e0e0;font-size:.82rem;"> Kotak Neo requires your server/machine IP
-        to be whitelisted before API calls succeed.
-        <a href="https://www.kotakneo.com/platform/kotak-neo-trade-api/static-ip-details/" style="color:#ffd200;">
-        Whitelist your IP here →</a></span>
-        </div>
+            <div style="background:#ffd20012;border:1px solid #ffd20030;border-radius:8px;
+            padding:.7rem 1rem;">
+            🤖 <b style="color:#ffd200;">Auto-TOTP:</b>
+            <span style="color:#e0e0e0;font-size:.85rem;"> The 6-digit TOTP code is generated
+            automatically every 30s from your seed. You never enter it manually.</span>
+            </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        <div style="background:#ffd20012;border:1px solid #ffd20030;border-radius:8px;
-        padding:.7rem 1rem;">
-        🤖 <b style="color:#ffd200;">Auto-TOTP:</b>
-        <span style="color:#e0e0e0;font-size:.85rem;"> The 6-digit TOTP code is generated
-        automatically every 30s from your seed. You never enter it manually.</span>
-        </div>
-        </div>
-        """, unsafe_allow_html=True)
+        with right:
+            env_key  = os.getenv("KOTAK_CONSUMER_KEY", "")
+            env_user = os.getenv("KOTAK_USERNAME", "")
+            env_seed = os.getenv("KOTAK_TOTP_SEED", "")
 
-    with right:
-        env_key  = os.getenv("KOTAK_CONSUMER_KEY", "")
-        env_user = os.getenv("KOTAK_USERNAME", "")
-        env_seed = os.getenv("KOTAK_TOTP_SEED", "")
+            consumer_key = st.text_input("Consumer Key",
+                value=st.session_state.get("neo_consumer_key", env_key),
+                placeholder="Your developer app consumer key")
+            username = st.text_input("User ID",
+                value=st.session_state.get("neo_username", env_user),
+                placeholder="e.g. AB1234")
+            password = st.text_input("Password", type="password",
+                placeholder="Kotak Neo login password")
+            totp_seed = st.text_input("TOTP Seed",
+                type="password",
+                value=st.session_state.get("neo_totp_seed", env_seed),
+                placeholder="Base-32 secret from authenticator app")
 
-        consumer_key = st.text_input("Consumer Key",
-            value=st.session_state.get("neo_consumer_key", env_key),
-            placeholder="Your developer app consumer key")
-        username = st.text_input("User ID",
-            value=st.session_state.get("neo_username", env_user),
-            placeholder="e.g. AB1234")
-        password = st.text_input("Password", type="password",
-            placeholder="Kotak Neo login password")
-        totp_seed = st.text_input("TOTP Seed",
-            type="password",
-            value=st.session_state.get("neo_totp_seed", env_seed),
-            placeholder="Base-32 secret from authenticator app")
+            save_env = st.checkbox("Remember in .env for next session")
 
-        save_env = st.checkbox("Remember in .env for next session")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                login_btn = st.button("🔐 Login", use_container_width=True, type="primary")
+            with col_b:
+                test_btn = st.button("🧪 Test TOTP", use_container_width=True)
 
-        col_a, col_b = st.columns(2)
-        with col_a:
-            login_btn = st.button("🔐 Login", use_container_width=True, type="primary")
-        with col_b:
-            test_btn = st.button("🧪 Test TOTP", use_container_width=True)
+        if test_btn:
+            if not totp_seed:
+                st.error("Enter your TOTP seed first.", icon="❌")
+            else:
+                try:
+                    import pyotp
+                    code = pyotp.TOTP(totp_seed.strip().replace(" ", "")).now()
+                    secs = 30 - (int(time.time()) % 30)
+                    st.success(f"✅ Seed valid!  Current code: **`{code}`**  (refreshes in {secs}s)", icon="🔢")
+                except Exception as e:
+                    st.error(f"Invalid TOTP seed: {e}", icon="❌")
 
-    if test_btn:
-        if not totp_seed:
-            st.error("Enter your TOTP seed first.", icon="❌")
-        else:
-            try:
-                import pyotp
-                code = pyotp.TOTP(totp_seed.strip().replace(" ", "")).now()
-                secs = 30 - (int(time.time()) % 30)
-                st.success(f"✅ Seed valid!  Current code: **`{code}`**  (refreshes in {secs}s)", icon="🔢")
-            except Exception as e:
-                st.error(f"Invalid TOTP seed: {e}", icon="❌")
-
-    if login_btn:
-        if not all([consumer_key, username, password, totp_seed]):
-            st.error("All four fields are required.", icon="❌")
-        else:
-            try:
-                from kotak_neo.client import KotakNeoClient
-                with st.spinner("Authenticating with Kotak Neo…"):
-                    c = KotakNeoClient(
-                        consumer_key = consumer_key.strip(),
-                        username     = username.strip(),
-                        password     = password,
-                        totp_seed    = totp_seed.strip().replace(" ", ""),
-                        auto_refresh = True,
-                    )
-                    c.login()
-                st.session_state.update({
-                    "kotak_client":     c,
-                    "neo_consumer_key": consumer_key,
-                    "neo_username":     username,
-                    "neo_totp_seed":    totp_seed,
-                })
-                if save_env:
-                    ep = _ROOT / ".env"
-                    lines = ep.read_text().splitlines() if ep.exists() else []
-                    upd = {"KOTAK_CONSUMER_KEY": consumer_key.strip(),
-                           "KOTAK_USERNAME": username.strip(),
-                           "KOTAK_TOTP_SEED": totp_seed.strip().replace(" ", "")}
-                    for k, v in upd.items():
-                        lines = [f"{k}={v}" if l.startswith(k+"=") else l for l in lines]
-                        if k not in [l.split("=")[0] for l in lines if "=" in l]:
-                            lines.append(f"{k}={v}")
-                    ep.write_text("\n".join(lines) + "\n")
-                    st.toast("Credentials saved to .env", icon="💾")
-                st.success(f"✅ Logged in as **{username}**", icon="🦁")
-                st.balloons()
-                st.rerun()
-            except ImportError:
-                st.error("kotak_neo package not found. Run: `pip install -r kotak_neo_python/requirements.txt`", icon="📦")
-            except Exception as exc:
-                st.error(f"Login failed: {exc}", icon="❌")
+        if login_btn:
+            if not all([consumer_key, username, password, totp_seed]):
+                st.error("All four fields are required.", icon="❌")
+            else:
+                try:
+                    from kotak_neo.client import KotakNeoClient
+                    with st.spinner("Authenticating with Kotak Neo…"):
+                        c = KotakNeoClient(
+                            consumer_key = consumer_key.strip(),
+                            username     = username.strip(),
+                            password     = password,
+                            totp_seed    = totp_seed.strip().replace(" ", ""),
+                            auto_refresh = True,
+                        )
+                        c.login()
+                    st.session_state.update({
+                        "kotak_client":     c,
+                        "neo_consumer_key": consumer_key,
+                        "neo_username":     username,
+                        "neo_totp_seed":    totp_seed,
+                    })
+                    if save_env:
+                        ep = _ROOT / ".env"
+                        lines = ep.read_text().splitlines() if ep.exists() else []
+                        upd = {"KOTAK_CONSUMER_KEY": consumer_key.strip(),
+                               "KOTAK_USERNAME": username.strip(),
+                               "KOTAK_TOTP_SEED": totp_seed.strip().replace(" ", "")}
+                        for k, v in upd.items():
+                            lines = [f"{k}={v}" if l.startswith(k+"=") else l for l in lines]
+                            if k not in [l.split("=")[0] for l in lines if "=" in l]:
+                                lines.append(f"{k}={v}")
+                        ep.write_text("\n".join(lines) + "\n")
+                        st.toast("Credentials saved to .env", icon="💾")
+                    st.success(f"✅ Logged in as **{username}**", icon="🦁")
+                    st.balloons()
+                    st.rerun()
+                except ImportError:
+                    st.error("kotak_neo package not found. Run: `pip install -r kotak_neo_python/requirements.txt`", icon="📦")
+                except Exception as exc:
+                    st.error(f"Login failed: {exc}", icon="❌")
 
 
-# ════════════════════════════════════════════════════════════════════════════
-# TAB 2 – PAPER TRADING
+    # ════════════════════════════════════════════════════════════════════════════
+    # TAB 2 – PAPER TRADING
 # ════════════════════════════════════════════════════════════════════════════
 with TAB_PAPER:
     if not _live():
@@ -466,7 +465,6 @@ with TAB_PAPER:
             <span style="color:#8892a4;"> Login first – paper trading uses your real Kotak Neo
             live prices, but no real money is ever placed.</span></div>''',
             unsafe_allow_html=True)
-        st.stop()
 
     client = _client()
 
@@ -649,7 +647,6 @@ with TAB_DASH:
             🔐 <b style="color:#ff5252;">Not connected.</b>
             <span style="color:#8892a4;"> Go to the <b>Login</b> tab first.</span></div>''',
             unsafe_allow_html=True)
-        st.stop()
 
     client = _client()
 
@@ -770,7 +767,6 @@ with TAB_TRADE:
             🔐 <b style="color:#ff5252;">Not connected.</b>
             <span style="color:#8892a4;"> Login first.</span></div>''',
             unsafe_allow_html=True)
-        st.stop()
 
     client = _client()
 
@@ -1003,7 +999,6 @@ with TAB_TRADE:
 with TAB_GTT:
     if not _live():
         st.markdown('<div style="color:#ff5252;">🔐 Login required.</div>', unsafe_allow_html=True)
-        st.stop()
     client = _client()
     st.markdown('<div class="sec-header">GTT – Good Till Triggered Orders</div>', unsafe_allow_html=True)
     st.caption("Set-and-forget orders that fire when price hits your target. Persist across sessions until filled or cancelled.")
@@ -1071,7 +1066,6 @@ with TAB_GTT:
 with TAB_CHAIN:
     if not _live():
         st.markdown('<div style="color:#ff5252;">🔐 Login required.</div>', unsafe_allow_html=True)
-        st.stop()
     client = _client()
     st.markdown('<div class="sec-header">Option Chain</div>', unsafe_allow_html=True)
 
@@ -1134,7 +1128,6 @@ with TAB_CHAIN:
 with TAB_QUOTES:
     if not _live():
         st.markdown('<div style="color:#ff5252;">🔐 Login required.</div>', unsafe_allow_html=True)
-        st.stop()
     client = _client()
     st.markdown('<div class="sec-header">Live Quotes</div>', unsafe_allow_html=True)
 
@@ -1186,7 +1179,6 @@ with TAB_QUOTES:
 with TAB_HIST:
     if not _live():
         st.markdown('<div style="color:#ff5252;">🔐 Login required.</div>', unsafe_allow_html=True)
-        st.stop()
     client = _client()
     st.markdown('<div class="sec-header">Today\'s Trade History</div>', unsafe_allow_html=True)
 
